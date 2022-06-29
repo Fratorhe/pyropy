@@ -15,3 +15,7 @@
 from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
+
+from .pyrolysis import PyrolysisParallel
+from .reaction_reader_writer import ReactManager
+from .experiment_reader import ExperimentReaderCSV

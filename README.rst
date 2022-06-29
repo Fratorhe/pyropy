@@ -11,7 +11,7 @@ pyropy
 
 Project to analyze TGA data
 
-* Free software: 3-clause BSD license
+* Free software: Apache License, Version 2.0
 * Documentation: (COMING SOON!) https://fratorhe.github.io/pyropy.
 
 Features
