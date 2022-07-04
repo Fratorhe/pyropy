@@ -1,7 +1,9 @@
+from abc import ABC
 from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
+import pandas as pd
 from scipy.integrate import solve_ivp
 
 from .reaction_reader_writer import ReactManager
@@ -10,6 +12,18 @@ R = 8.314
 
 
 class Pyrolysis(Protocol):
+
+    temp_0: float
+    temp_end: float
+    beta: float
+    n_points: int
+    reaction_scheme_obj: ReactManager
+    isothermal: bool = False
+    rho_solid: np.array([])
+    drho_solid: np.array([])
+    time: np.array([])
+    temperature: np.array([])
+
     def generate_rate(self) -> list:
         ...
 
@@ -19,19 +33,34 @@ class Pyrolysis(Protocol):
     def solve_system(self) -> None:
         ...
 
+    def to_csv(self, filename: str) -> None:
+        file_save = pd.DataFrame(data=None, columns=[], index=None)
+        file_save['time'] = self.time
+        file_save['temperature'] = self.temperature
+        file_save['rho'] = self.rho_solid
+        file_save['dRho'] = self.drho_solid
+        file_save.to_csv(filename)
 
-def compute_time_temperature(betaKs: float, temp_0: float = 373, temp_end: float = 2000, n_points: int = 500):
+
+def compute_time(betaKs: float, temp_0: float = 373, temp_end: float = 2000, n_points: int = 500):
     """Compute temperature as a function of time based on the given heating rate and
     initial temperature temp_0. If no time vector is provided, a time vector of size n_points
     is computed from temp_0 to temp_end"""
 
     time = np.linspace(0, (temp_end - temp_0) / betaKs, n_points)
+    return time
+
+def compute_temperature(time: np.array, temp_0: float, betaKs: float):
+    """Compute temperature as a function of time based on the given heating rate and
+    initial temperature temp_0. If no time vector is provided, a time vector of size n_points
+    is computed from temp_0 to temp_end"""
+
     temperature = time * betaKs + temp_0
-    return time, temperature
+    return temperature
 
 
 @dataclass
-class PyrolysisParallel:
+class PyrolysisParallel(Pyrolysis):
     temp_0: float
     temp_end: float
     beta: float
@@ -46,9 +75,8 @@ class PyrolysisParallel:
         # Convert beta in K/min to betaKs in K/sec
         self.betaKs = self.beta / 60
         # Compute temperature and time
-        self.time, self.temperature = compute_time_temperature(
-            temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points
-        )
+        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
 
         # initizalize rho and drho_solid
         self.rho_solid = np.zeros(self.n_points)  # initial density
@@ -105,7 +133,7 @@ class PyrolysisParallel:
 
 
 @dataclass
-class PyrolysisCompetitive:
+class PyrolysisCompetitive(Pyrolysis):
     temp_0: float
     temp_end: float
     beta: float
@@ -120,9 +148,9 @@ class PyrolysisCompetitive:
         # Convert beta in K/min to betaKs in K/sec
         self.betaKs = self.beta / 60
         # Compute temperature and time
-        self.time, self.temperature = compute_time_temperature(
-            temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points
-        )
+        # Compute temperature and time
+        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
 
         # initizalize rho and drho_solid
         self.rho_solid = np.zeros(self.n_points)  # initial density
@@ -150,16 +178,15 @@ class PyrolysisCompetitive:
                         self.reaction_scheme_obj.solid_reactant[reaction]
                     )  # finds which reactant produces this solid
                     k_gain[solid][idx_reactant] += (
-                        self.reaction_scheme_obj.g_sol[reaction]
-                        * (10 ** self.reaction_scheme_obj.dict_params["A"][reaction])
-                        * np.exp(-self.reaction_scheme_obj.dict_params["E"][reaction] / (R * temperature))
+                            self.reaction_scheme_obj.g_sol[reaction]
+                            * (10 ** self.reaction_scheme_obj.dict_params["A"][reaction])
+                            * np.exp(-self.reaction_scheme_obj.dict_params["E"][reaction] / (R * temperature))
                     )  # k of Arrhenius
         return -k_loss + k_gain
 
-    def pyro_rates(self, z, t, T0, betaKs):
+    def pyro_rates(self, z, t):
         """Compute the pyrolysis reaction rates at a given temperature"""
-
-        temperature = T0 + betaKs * t
+        temperature = compute_temperature(t, temp_0=self.temp_0, betaKs=self.betaKs)
         drhodt = np.dot(self.generate_matrix(temperature), z)
         return drhodt
 
@@ -168,13 +195,13 @@ class PyrolysisCompetitive:
         By default, only Radau method for solving the initial value problem."""
 
         paramStep = 5  # for the max step in solver, adjust if needed
-        max_step = paramStep / self.betaKs * 100
+        max_step = paramStep / self.betaKs# * 100
         temp_0 = self.temperature[0]
 
         # Solve the system
         if self.isothermal:
             solution = solve_ivp(
-                fun=lambda t, z: self.pyro_rates(z, t, temp_0, self.betaKs),
+                fun=lambda t, z: self.pyro_rates(z, t),
                 t_span=(0, self.time[-1]),
                 y0=self.reaction_scheme_obj.rhoIni,
                 t_eval=self.time,
@@ -182,7 +209,7 @@ class PyrolysisCompetitive:
             )
         else:
             solution = solve_ivp(
-                fun=lambda t, z: self.pyro_rates(z, t, temp_0, self.betaKs),
+                fun=lambda t, z: self.pyro_rates(z, t),
                 t_span=(0, self.time[-1]),
                 y0=self.reaction_scheme_obj.rhoIni,
                 t_eval=self.time,
@@ -203,4 +230,4 @@ class PyrolysisCompetitive:
         # Compute total solid density gradient
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)
 
-        return 0
+        return solution.y

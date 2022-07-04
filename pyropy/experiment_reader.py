@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+import numpy as np
 import pandas as pd
 
 
@@ -12,10 +13,14 @@ class ExperimentReader(Protocol):
 
     filename: str
     folder: str
+    time: np.array
+    temperature: np.array
+    dRho: np.array
+    Rho: np.array
 
 
 @dataclass
-class ExperimentReaderCSV:
+class ExperimentReaderCSV(ExperimentReader):
     """ """
 
     filename: str

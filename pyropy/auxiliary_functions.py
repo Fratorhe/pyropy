@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 
@@ -30,3 +32,13 @@ def replace_results(vector, param_names, filename_template, filename_out, symbol
                     line_new = line_new.replace(symbolleft + param + symbolright, str(val))
                 line = line_new
                 filewrite.write(line)
+
+
+def get_numbers_from_filename(filename):
+    """
+    This is used to get the heating rate from the filename
+
+    :param filename: str (with the heating rate)
+    :return: str
+    """
+    return re.findall(r"[-+]?\d*\.\d+|\d+", filename)

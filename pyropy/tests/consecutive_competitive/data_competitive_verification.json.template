@@ -1,0 +1,12 @@
+{
+  "solids": ["S1", "Char1", "Char2"],
+  "rhoIni": [100, 0, 0],
+  "reactions": [
+                {"S1" : "Char1 + Gas1"},
+                {"Char1" : "Char2 + Gas1"}
+                ],
+  "parameters": [
+                {"E":  (E1), "A":(A1),  "g":[0.16]},
+                {"E":  (E2), "A":(A2),  "g":[0.2]}
+                ]
+}

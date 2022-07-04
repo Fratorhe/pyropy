@@ -3,6 +3,16 @@ import json
 from jsmin import jsmin
 
 
+def replace_results(vector, param_names, filename_template, filename_out, symbolleft='(', symbolright=')'):
+    with open(filename_template, 'r') as fileread:
+        with open(filename_out, 'w+') as filewrite:
+            for line in fileread:
+                line_new = line
+                for val, param in zip(vector, param_names):
+                    line_new = line_new.replace(symbolleft + param + symbolright, str(val))
+                line = line_new
+                filewrite.write(line)
+
 class ReactManager:
     def __init__(self, filename: str = None, folder: str = "./"):
         self.filename = filename
@@ -98,4 +108,3 @@ class ReactManager:
         with open(filename, "w") as outfile:
             json.dump(data, outfile, indent=2)
 
-    # def __str__(self):
