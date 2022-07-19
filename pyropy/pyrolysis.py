@@ -5,6 +5,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
+from scipy import special
 
 from .reaction_reader_writer import ReactManager
 
@@ -131,7 +132,38 @@ class PyrolysisParallel(Pyrolysis):
         self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)
 
+    def compute_analytical_solution(self):
+        """ For parallel reactions, there exists an analytical solution (see Torres, Coheur, NASA TM 2018).
+        The solution is implemented here."""
+        tau = self.betaKs
+        T_0 = self.temperature[0]
+        
+        # Exponential integral function
+        ei = special.expi
 
+        # Analytical solution
+        percent_evo_sum = np.zeros(len(self.time))
+        pi_j = np.zeros(len(self.time))
+        for idx in range(0, self.reaction_scheme_obj.n_reactions):
+            xi_init = 0
+            n = self.reaction_scheme_obj.dict_params['n'][idx]
+            A = 10 ** self.reaction_scheme_obj.dict_params['A'][idx]
+            E = self.reaction_scheme_obj.dict_params['E'][idx]
+
+            C = (1 - xi_init) ** (1 - n) / (1 - n) + (A / tau) * T_0 * np.exp(-E / (R * T_0)) \
+                + ei(-E / (R * T_0)) * E * (A / tau) / R
+
+            xi_T = 1 - ((1 - n) * (-(A / tau) * self.temperature * np.exp(-E / (R * self.temperature)) \
+                                   - ei(-E / (R * self.temperature)) * E * (A / tau) / R + C)) ** (1 / (1 - n))
+
+            percent_evo_sum += xi_T * self.reaction_scheme_obj.dict_params["F"][idx]
+            pi_j += self.reaction_scheme_obj.dict_params["F"][idx] * (1 - xi_T) ** n * (A / tau) * np.exp(-E / (R * self.temperature))
+
+        # Mass loss and mass loss rate
+        self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
+        self.drho_solid = self.reaction_scheme_obj.rhoIni * pi_j
+        
+        
 @dataclass
 class PyrolysisCompetitive(Pyrolysis):
     temp_0: float
