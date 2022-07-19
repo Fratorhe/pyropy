@@ -1,8 +1,7 @@
 # List required packages in this file, one per line.
 
-pyropy~=0.post1.dev0+gdac22d7
 numpy~=1.23.0
 pandas~=1.4.2
 scipy~=1.8.1
-jsmin~=3.0.1
-setuptools~=61.2.0
+jsmin
+setuptools

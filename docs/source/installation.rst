@@ -4,4 +4,9 @@ Installation
 
 At the command line::
 
-    $ pip install pyropy
+    $ pip install .
+
+
+or as a developer
+
+    $ pip install -e .
