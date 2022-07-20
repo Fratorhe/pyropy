@@ -2,11 +2,11 @@
 pyropy
 ======
 
-.. image:: https://img.shields.io/travis/fratorhe/pyropy.svg
-        :target: https://travis-ci.org/fratorhe/pyropy
+![madewithpython](https://img.shields.io/badge/Made%20With-Python-blue.svg?style=flat)
 
-.. image:: https://img.shields.io/pypi/v/pyropy.svg
-        :target: https://pypi.python.org/pypi/pyropy
+![CI](https://github.com/Fratorhe/pyropy/actions/workflows/unit-tests.yml/badge.svg)
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
 Project to analyze TGA data.
