@@ -41,6 +41,7 @@ def test_parallel_scheme(reactions: ReactManager):
 
     np.testing.assert_allclose(test.rho_solid, solution_known)
 
+
 def test_parallel_scheme_analytical(reactions: ReactManager):
     T_0 = 373
     T_end = 2000
