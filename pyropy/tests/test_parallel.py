@@ -72,3 +72,7 @@ def test_parallel_scheme_analytical(reactions: ReactManager):
     )
 
     np.testing.assert_allclose(test.rho_solid, solution_known, rtol=1e-05)
+
+
+def test_false():
+    assert False
