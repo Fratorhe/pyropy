@@ -6,11 +6,12 @@ import pytest
 from pyropy import PyrolysisParallel, PyrolysisParallelAnalytical
 from pyropy import ReactManager
 
-file_path = (os.path.dirname(__file__))
+file_path = os.path.dirname(__file__)
+
 
 @pytest.fixture
 def reactions() -> ReactManager:
-    return ReactManager(filename="data_parallel.json", folder=f'{file_path}/')
+    return ReactManager(filename="data_parallel.json", folder=f"{file_path}/")
 
 
 def test_parallel_scheme(reactions: ReactManager):
@@ -51,7 +52,9 @@ def test_parallel_scheme_analytical(reactions: ReactManager):
     b = 20
     reactions.react_reader()
     reactions.param_reader()
-    test = PyrolysisParallelAnalytical(temp_0=T_0, temp_end=T_end, beta=b, n_points=15, reaction_scheme_obj=reactions)
+    test = PyrolysisParallelAnalytical(
+        temp_0=T_0, temp_end=T_end, beta=b, n_points=15, reaction_scheme_obj=reactions
+    )
     # Numerical solution using 200 points
     test.solve_system()
     solution_known = np.array(
@@ -75,4 +78,3 @@ def test_parallel_scheme_analytical(reactions: ReactManager):
     )
 
     np.testing.assert_allclose(test.rho_solid, solution_known, rtol=1e-05)
-

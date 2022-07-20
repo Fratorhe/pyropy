@@ -4,11 +4,12 @@ import pytest
 
 from pyropy import ReactManager
 
-file_path = (os.path.dirname(__file__))
+file_path = os.path.dirname(__file__)
+
 
 @pytest.fixture
 def reaction_manager() -> ReactManager:
-    return ReactManager(filename="data_parallel.json", folder=f'{file_path}/')
+    return ReactManager(filename="data_parallel.json", folder=f"{file_path}/")
 
 
 def test_number_reactions(reaction_manager: ReactManager) -> None:

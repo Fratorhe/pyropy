@@ -23,9 +23,18 @@ class SpotpySetup(object):
         :atrr iternumber:
     """
 
-    def __init__(self, files, params, folder, scheme_file, pyro_type: Type[Pyrolysis] = PyrolysisParallel,
-                 keepFolders=False,
-                 experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV, isothermal=False, objective_function=Callable):
+    def __init__(
+        self,
+        files,
+        params,
+        folder,
+        scheme_file,
+        pyro_type: Type[Pyrolysis] = PyrolysisParallel,
+        keepFolders=False,
+        experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
+        isothermal=False,
+        objective_function=Callable,
+    ):
         """
 
         :param files: list of files to be treated
@@ -121,15 +130,22 @@ class SpotpySetup(object):
         os.makedirs(str(self.iternumber))
 
         for beta, temperature in zip(self.betas, self.temperatures):
-            write_file_scheme(filename=self.scheme_file, vector=vector, param_names=self.names,
-                              folder=str(self.iternumber) + '/')
-            reactions = ReactManager(filename=self.scheme_file, folder=str(self.iternumber) + '/')
+            write_file_scheme(
+                filename=self.scheme_file, vector=vector, param_names=self.names, folder=str(self.iternumber) + "/"
+            )
+            reactions = ReactManager(filename=self.scheme_file, folder=str(self.iternumber) + "/")
             reactions.react_reader()
             reactions.param_reader()
             temperature = list(temperature)
             n_timesteps = len(temperature)
-            simulation = self.pyro_type(temp_0=temperature[0], temp_end=temperature[-1], beta=beta,
-                                        n_points=n_timesteps, isothermal=False, reaction_scheme_obj=reactions)
+            simulation = self.pyro_type(
+                temp_0=temperature[0],
+                temp_end=temperature[-1],
+                beta=beta,
+                n_points=n_timesteps,
+                isothermal=False,
+                reaction_scheme_obj=reactions,
+            )
             simulation.solve_system()
             results_dRho.append(simulation.drho_solid)
             results_Rho.append(simulation.rho_solid)

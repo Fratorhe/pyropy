@@ -7,11 +7,12 @@ from pyropy import ReactManager
 from pyropy.pyrolysis import PyrolysisCompetitive
 
 
-file_path = (os.path.dirname(__file__))
+file_path = os.path.dirname(__file__)
+
 
 @pytest.fixture
 def reactions() -> ReactManager:
-    return ReactManager(filename="data_competing.json", folder=f'{file_path}/')
+    return ReactManager(filename="data_competing.json", folder=f"{file_path}/")
 
 
 def test_competitive_scheme(reactions: ReactManager):

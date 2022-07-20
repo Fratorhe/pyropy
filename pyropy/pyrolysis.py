@@ -1,4 +1,3 @@
-from abc import ABC
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -36,10 +35,10 @@ class Pyrolysis(Protocol):
 
     def to_csv(self, filename: str) -> None:
         file_save = pd.DataFrame(data=None, columns=[], index=None)
-        file_save['time'] = self.time
-        file_save['temperature'] = self.temperature
-        file_save['rho'] = self.rho_solid
-        file_save['dRho'] = self.drho_solid
+        file_save["time"] = self.time
+        file_save["temperature"] = self.temperature
+        file_save["rho"] = self.rho_solid
+        file_save["dRho"] = self.drho_solid
         file_save.to_csv(filename)
 
 
@@ -50,6 +49,7 @@ def compute_time(betaKs: float, temp_0: float = 373, temp_end: float = 2000, n_p
 
     time = np.linspace(0, (temp_end - temp_0) / betaKs, n_points)
     return time
+
 
 def compute_temperature(time: np.array, temp_0: float, betaKs: float):
     """Compute temperature as a function of time based on the given heating rate and
@@ -76,7 +76,9 @@ class PyrolysisParallel(Pyrolysis):
         # Convert beta in K/min to betaKs in K/sec
         self.betaKs = self.beta / 60
         # Compute temperature and time
-        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.time = compute_time(
+            temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points
+        )
         self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
 
         # initizalize rho and drho_solid
@@ -131,8 +133,8 @@ class PyrolysisParallel(Pyrolysis):
         # Mass loss and mass loss rate
         self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)
-        
-        
+
+
 @dataclass
 class PyrolysisCompetitive(Pyrolysis):
     temp_0: float
@@ -150,7 +152,9 @@ class PyrolysisCompetitive(Pyrolysis):
         self.betaKs = self.beta / 60
         # Compute temperature and time
         # Compute temperature and time
-        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.time = compute_time(
+            temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points
+        )
         self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
 
         # initizalize rho and drho_solid
@@ -179,9 +183,9 @@ class PyrolysisCompetitive(Pyrolysis):
                         self.reaction_scheme_obj.solid_reactant[reaction]
                     )  # finds which reactant produces this solid
                     k_gain[solid][idx_reactant] += (
-                            self.reaction_scheme_obj.g_sol[reaction]
-                            * (10 ** self.reaction_scheme_obj.dict_params["A"][reaction])
-                            * np.exp(-self.reaction_scheme_obj.dict_params["E"][reaction] / (R * temperature))
+                        self.reaction_scheme_obj.g_sol[reaction]
+                        * (10 ** self.reaction_scheme_obj.dict_params["A"][reaction])
+                        * np.exp(-self.reaction_scheme_obj.dict_params["E"][reaction] / (R * temperature))
                     )  # k of Arrhenius
         return -k_loss + k_gain
 
@@ -196,8 +200,8 @@ class PyrolysisCompetitive(Pyrolysis):
         By default, only Radau method for solving the initial value problem."""
 
         paramStep = 5  # for the max step in solver, adjust if needed
-        max_step = paramStep / self.betaKs# * 100
-        temp_0 = self.temperature[0]
+        max_step = paramStep / self.betaKs  # * 100
+        # temp_0 = self.temperature[0]
 
         # Solve the system
         if self.isothermal:
@@ -233,6 +237,7 @@ class PyrolysisCompetitive(Pyrolysis):
 
         return solution.y
 
+
 @dataclass
 class PyrolysisParallelAnalytical(Pyrolysis):
     temp_0: float
@@ -249,7 +254,9 @@ class PyrolysisParallelAnalytical(Pyrolysis):
         # Convert beta in K/min to betaKs in K/sec
         self.betaKs = self.beta / 60
         # Compute temperature and time
-        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.time = compute_time(
+            temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points
+        )
         self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
 
         # initizalize rho and drho_solid
@@ -257,7 +264,7 @@ class PyrolysisParallelAnalytical(Pyrolysis):
         self.drho_solid = np.zeros(self.n_points)  # initial derivative density
 
     def solve_system(self):
-        """ For parallel reactions, there exists an analytical solution (see Torres, Coheur, NASA TM 2018).
+        """For parallel reactions, there exists an analytical solution (see Torres, Coheur, NASA TM 2018).
         The solution is implemented here."""
         tau = self.betaKs
         T_0 = self.temperature[0]
@@ -270,19 +277,32 @@ class PyrolysisParallelAnalytical(Pyrolysis):
         pi_j = np.zeros(len(self.time))
         for idx in range(0, self.reaction_scheme_obj.n_reactions):
             xi_init = 0
-            n = self.reaction_scheme_obj.dict_params['n'][idx]
-            A = 10 ** self.reaction_scheme_obj.dict_params['A'][idx]
-            E = self.reaction_scheme_obj.dict_params['E'][idx]
+            n = self.reaction_scheme_obj.dict_params["n"][idx]
+            A = 10 ** self.reaction_scheme_obj.dict_params["A"][idx]
+            E = self.reaction_scheme_obj.dict_params["E"][idx]
 
-            C = (1 - xi_init) ** (1 - n) / (1 - n) + (A / tau) * T_0 * np.exp(-E / (R * T_0)) \
+            C = (
+                (1 - xi_init) ** (1 - n) / (1 - n)
+                + (A / tau) * T_0 * np.exp(-E / (R * T_0))
                 + ei(-E / (R * T_0)) * E * (A / tau) / R
+            )
 
-            xi_T = 1 - ((1 - n) * (-(A / tau) * self.temperature * np.exp(-E / (R * self.temperature)) \
-                                   - ei(-E / (R * self.temperature)) * E * (A / tau) / R + C)) ** (1 / (1 - n))
+            xi_T = 1 - (
+                (1 - n)
+                * (
+                    -(A / tau) * self.temperature * np.exp(-E / (R * self.temperature))
+                    - ei(-E / (R * self.temperature)) * E * (A / tau) / R
+                    + C
+                )
+            ) ** (1 / (1 - n))
 
             percent_evo_sum += xi_T * self.reaction_scheme_obj.dict_params["F"][idx]
-            pi_j += self.reaction_scheme_obj.dict_params["F"][idx] * (1 - xi_T) ** n * (A / tau) * np.exp(
-                -E / (R * self.temperature))
+            pi_j += (
+                self.reaction_scheme_obj.dict_params["F"][idx]
+                * (1 - xi_T) ** n
+                * (A / tau)
+                * np.exp(-E / (R * self.temperature))
+            )
 
         # Mass loss and mass loss rate
         self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
