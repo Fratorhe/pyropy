@@ -9,7 +9,7 @@ pyropy
         :target: https://pypi.python.org/pypi/pyropy
 
 
-Project to analyze TGA data
+Project to analyze TGA data.
 
 * Free software: Apache License, Version 2.0
 * Documentation: (COMING SOON!) https://fratorhe.github.io/pyropy.
