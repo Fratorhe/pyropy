@@ -17,7 +17,7 @@ from ._version import get_versions
 __version__ = get_versions()["version"]
 del get_versions
 
-from .pyrolysis import PyrolysisParallel, Pyrolysis, PyrolysisCompetitive
+from .pyrolysis import PyrolysisParallel, Pyrolysis, PyrolysisCompetitive, PyrolysisParallelAnalytical
 from .reaction_reader_writer import ReactManager, replace_results
 from .experiment_reader import ExperimentReaderCSV, ExperimentReader
 from .optimizer import SpotpySetup

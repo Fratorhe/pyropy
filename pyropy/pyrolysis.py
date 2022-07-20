@@ -5,6 +5,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
+from scipy import special
 
 from .reaction_reader_writer import ReactManager
 
@@ -130,8 +131,8 @@ class PyrolysisParallel(Pyrolysis):
         # Mass loss and mass loss rate
         self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)
-
-
+        
+        
 @dataclass
 class PyrolysisCompetitive(Pyrolysis):
     temp_0: float
@@ -231,3 +232,58 @@ class PyrolysisCompetitive(Pyrolysis):
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)
 
         return solution.y
+
+@dataclass
+class PyrolysisParallelAnalytical(Pyrolysis):
+    temp_0: float
+    temp_end: float
+    beta: float
+    n_points: int
+    reaction_scheme_obj: ReactManager
+    isothermal: bool = False
+
+    param_names: list = field(default_factory=list, init=False)
+    dict_params: dict = field(default_factory=dict, init=False)
+
+    def __post_init__(self) -> None:
+        # Convert beta in K/min to betaKs in K/sec
+        self.betaKs = self.beta / 60
+        # Compute temperature and time
+        self.time = compute_time(temp_0=self.temp_0, temp_end=self.temp_end, betaKs=self.betaKs, n_points=self.n_points)
+        self.temperature = compute_temperature(self.time, temp_0=self.temp_0, betaKs=self.betaKs)
+
+        # initizalize rho and drho_solid
+        self.rho_solid = np.zeros(self.n_points)  # initial density
+        self.drho_solid = np.zeros(self.n_points)  # initial derivative density
+
+    def solve_system(self):
+        """ For parallel reactions, there exists an analytical solution (see Torres, Coheur, NASA TM 2018).
+        The solution is implemented here."""
+        tau = self.betaKs
+        T_0 = self.temperature[0]
+
+        # Exponential integral function
+        ei = special.expi
+
+        # Analytical solution
+        percent_evo_sum = np.zeros(len(self.time))
+        pi_j = np.zeros(len(self.time))
+        for idx in range(0, self.reaction_scheme_obj.n_reactions):
+            xi_init = 0
+            n = self.reaction_scheme_obj.dict_params['n'][idx]
+            A = 10 ** self.reaction_scheme_obj.dict_params['A'][idx]
+            E = self.reaction_scheme_obj.dict_params['E'][idx]
+
+            C = (1 - xi_init) ** (1 - n) / (1 - n) + (A / tau) * T_0 * np.exp(-E / (R * T_0)) \
+                + ei(-E / (R * T_0)) * E * (A / tau) / R
+
+            xi_T = 1 - ((1 - n) * (-(A / tau) * self.temperature * np.exp(-E / (R * self.temperature)) \
+                                   - ei(-E / (R * self.temperature)) * E * (A / tau) / R + C)) ** (1 / (1 - n))
+
+            percent_evo_sum += xi_T * self.reaction_scheme_obj.dict_params["F"][idx]
+            pi_j += self.reaction_scheme_obj.dict_params["F"][idx] * (1 - xi_T) ** n * (A / tau) * np.exp(
+                -E / (R * self.temperature))
+
+        # Mass loss and mass loss rate
+        self.rho_solid = self.reaction_scheme_obj.rhoIni * (1 - percent_evo_sum)
+        self.drho_solid = self.reaction_scheme_obj.rhoIni * pi_j
