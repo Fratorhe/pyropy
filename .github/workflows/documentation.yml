@@ -8,7 +8,9 @@ jobs:
       - uses: actions/setup-python@v4
       - name: Install dependencies
         run: |
-          pip install sphinx sphinx_rtd_theme
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+          python -m pip install .
       - name: Sphinx build
         run: |
           sphinx-build docs/source docs/build
