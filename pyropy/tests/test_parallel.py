@@ -78,3 +78,18 @@ def test_parallel_scheme_analytical(reactions: ReactManager):
     )
 
     np.testing.assert_allclose(test.rho_solid, solution_known, rtol=1e-05)
+
+
+def test_parallel_scheme_analytical_division_0(reactions: ReactManager):
+    with pytest.raises(ZeroDivisionError):
+        T_0 = 373
+        T_end = 2000
+        b = 20
+        reactions.react_reader()
+        reactions.param_reader()
+        reactions.dict_params["n"] = [1, 1]  # setting n parameter to 1 to force the division by 0 error
+        test = PyrolysisParallelAnalytical(
+            temp_0=T_0, temp_end=T_end, beta=b, n_points=15, reaction_scheme_obj=reactions
+        )
+        # Numerical solution using 200 points
+        test.solve_system()
