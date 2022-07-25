@@ -278,6 +278,10 @@ class PyrolysisParallelAnalytical(Pyrolysis):
         for idx in range(0, self.reaction_scheme_obj.n_reactions):
             xi_init = 0
             n = self.reaction_scheme_obj.dict_params["n"][idx]
+
+            if n == 1:
+                raise ZeroDivisionError("n cannot be equal to 1 in this mechanism!")
+
             A = 10 ** self.reaction_scheme_obj.dict_params["A"][idx]
             E = self.reaction_scheme_obj.dict_params["E"][idx]
 
