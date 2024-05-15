@@ -20,7 +20,7 @@ def rmse_multiple_files(evaluation, simulation):
     :rtype: float
     """
 
-    scale_coeff_dRho = 10000
+    scale_coeff_dRho = 1000
     mses = []
     n_objectives = len(evaluation)  # 1 if 1 objective (dRho), 2 if 2 objectives (dRho, Rho)
     # n_objectives = 1  # 1 if only dRho
