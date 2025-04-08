@@ -8,8 +8,7 @@ from scipy.integrate import solve_ivp
 from scipy.special import expi as ei
 
 from pyropy.constants import R_gas  # exponential integral function
-
-from .reaction_reader_writer import ReactManager
+from pyropy.reaction_reader_writer import ReactManager
 
 
 @dataclass
@@ -75,7 +74,7 @@ class Pyrolysis(Protocol):
 
 
 def compute_time(
-    betaKs: float, temp_0: float = 373, temp_end: float = 2000, n_points: int = 500
+        betaKs: float, temp_0: float = 373, temp_end: float = 2000, n_points: int = 500
 ) -> np.ndarray:
     """
     Compute a time vector for a linear temperature ramp.
@@ -181,11 +180,11 @@ class PyrolysisParallel(Pyrolysis):
         return k
 
     def pyro_rates(
-        self,
-        z: list[float] | None = None,
-        t: float = 0.0,
-        T0: float = float("inf"),
-        betaKs: float = 0.3333,
+            self,
+            z: list[float] | None = None,
+            t: float = 0.0,
+            T0: float = float("inf"),
+            betaKs: float = 0.3333,
     ) -> list[float]:
         """
         Compute pyrolysis reaction rates at a given time and base temperature.
@@ -323,15 +322,15 @@ class PyrolysisCompetitive(Pyrolysis):
 
                 # Loss from this solid due to it being a reactant
                 if (
-                    self.reaction_scheme_obj.solids[solid]
-                    == self.reaction_scheme_obj.solid_reactant[reaction]
+                        self.reaction_scheme_obj.solids[solid]
+                        == self.reaction_scheme_obj.solid_reactant[reaction]
                 ):
                     k_loss[solid][solid] += k
 
                 # Gain in this solid due to it being a product
                 if (
-                    self.reaction_scheme_obj.solids[solid]
-                    == self.reaction_scheme_obj.solid_product[reaction]
+                        self.reaction_scheme_obj.solids[solid]
+                        == self.reaction_scheme_obj.solid_product[reaction]
                 ):
                     idx_reactant = self.reaction_scheme_obj.solids.index(
                         self.reaction_scheme_obj.solid_reactant[reaction]
@@ -436,7 +435,8 @@ class PyrolysisParallelAnalytical(Pyrolysis):
         self.rho_solid = np.zeros(self.n_points)  # initial density
         self.drho_solid = np.zeros(self.n_points)  # initial derivative density
 
-    def pyro_rates(self): ...
+    def pyro_rates(self):
+        ...
 
     def solve_system(self):
         """For parallel reactions, there exists an analytical solution (see Torres, Coheur, NASA TM 2018).
@@ -459,37 +459,37 @@ class PyrolysisParallelAnalytical(Pyrolysis):
             E = self.reaction_scheme_obj.dict_params["E"][idx]
 
             C = (
-                (1 - xi_init) ** (1 - n) / (1 - n)
-                + (A / tau) * T_0 * np.exp(-E / (R_gas * T_0))
-                + ei(-E / (R_gas * T_0)) * E * (A / tau) / R_gas
+                    (1 - xi_init) ** (1 - n) / (1 - n)
+                    + (A / tau) * T_0 * np.exp(-E / (R_gas * T_0))
+                    + ei(-E / (R_gas * T_0)) * E * (A / tau) / R_gas
             )
 
             xi_T = 1 - (
-                (1 - n)
-                * (
-                    -(A / tau)
-                    * self.temperature
-                    * np.exp(-E / (R_gas * self.temperature))
-                    - ei(-E / (R_gas * self.temperature)) * E * (A / tau) / R_gas
-                    + C
-                )
+                    (1 - n)
+                    * (
+                            -(A / tau)
+                            * self.temperature
+                            * np.exp(-E / (R_gas * self.temperature))
+                            - ei(-E / (R_gas * self.temperature)) * E * (A / tau) / R_gas
+                            + C
+                    )
             ) ** (1 / (1 - n))
 
             # Update the cumulative evolution and reaction rate
             percent_evo_sum += xi_T * self.reaction_scheme_obj.dict_params["F"][idx]
             pi_j += (
-                self.reaction_scheme_obj.dict_params["F"][idx]
-                * (1 - xi_T) ** n
-                * (A / tau)
-                * np.exp(-E / (R_gas * self.temperature))
+                    self.reaction_scheme_obj.dict_params["F"][idx]
+                    * (1 - xi_T) ** n
+                    * (A / tau)
+                    * np.exp(-E / (R_gas * self.temperature))
             )
 
         # Compute mass loss and mass loss rate
         self.rho_solid = self.reaction_scheme_obj.rhoIni * (
-            1 - percent_evo_sum
+                1 - percent_evo_sum
         )  # Solid density evolution
         self.drho_solid = (
-            self.reaction_scheme_obj.rhoIni * pi_j
+                self.reaction_scheme_obj.rhoIni * pi_j
         )  # Rate of change of solid density
 
         return self.rho_solid, self.drho_solid

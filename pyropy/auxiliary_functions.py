@@ -27,12 +27,12 @@ def data_to_csv(name: str, pyrolysis_object) -> None:
 
 
 def write_file_scheme(
-    vector: list[float],
-    param_names: list[str],
-    filename: str,
-    symbolleft: str = "(",
-    symbolright: str = ")",
-    folder: str = "./",
+        vector: list[float],
+        param_names: list[str],
+        filename: str,
+        symbolleft: str = "(",
+        symbolright: str = ")",
+        folder: str = "./",
 ) -> None:
     """
     Replace placeholders in a template and write the result to file.
@@ -69,12 +69,12 @@ def write_file_scheme(
 
 
 def replace_results(
-    vector_vals: list[float],
-    param_names: list[str],
-    filename_template: str,
-    filename_out: str,
-    symbolleft: str = "(",
-    symbolright: str = ")",
+        vector_vals: list[float],
+        param_names: list[str],
+        filename_template: str,
+        filename_out: str,
+        symbolleft: str = "(",
+        symbolright: str = ")",
 ) -> None:
     """
     Replace placeholders in a template file and write the result to a new file.

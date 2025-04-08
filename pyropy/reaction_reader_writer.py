@@ -4,7 +4,7 @@ from jsmin import jsmin
 
 
 def replace_results(
-    vector, param_names, filename_template, filename_out, symbolleft="(", symbolright=")"
+        vector, param_names, filename_template, filename_out, symbolleft="(", symbolright=")"
 ):
     """
     Replaces parameter placeholders in a template file with values from a vector.

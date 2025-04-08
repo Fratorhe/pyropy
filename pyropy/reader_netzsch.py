@@ -50,7 +50,7 @@ class ExperimentReaderNetzsch:
         # dm/dT = dm/dt * 1/beta
         # we do it this way because T can oscilate, while t always increases.
         df["dm"] = (
-            -self.compute_derivative(df["time"].values, df["mass"].values) / self.rateKs
+                -self.compute_derivative(df["time"].values, df["mass"].values) / self.rateKs
         )
 
         ## if need to apply the filter in the derivative use this:

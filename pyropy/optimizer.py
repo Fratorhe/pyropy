@@ -7,7 +7,6 @@ import spotpy
 from pyropy import (
     ExperimentReader,
     ExperimentReaderCSV,
-    Pyrolysis,
     PyrolysisParallel,
     ReactManager,
 )
@@ -40,16 +39,16 @@ class SpotpySetup:
     """
 
     def __init__(
-        self,
-        files: list[str],
-        params: list,
-        folder: str,
-        scheme_file: str,
-        pyro_type: Type = PyrolysisParallel,
-        keepFolders: bool = False,
-        experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
-        isothermal: bool = False,
-        objective_function: Callable | None = None,
+            self,
+            files: list[str],
+            params: list,
+            folder: str,
+            scheme_file: str,
+            pyro_type: Type = PyrolysisParallel,
+            keepFolders: bool = False,
+            experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
+            isothermal: bool = False,
+            objective_function: Callable | None = None,
     ) -> None:
         """
         Initialize the SPOTPY setup.

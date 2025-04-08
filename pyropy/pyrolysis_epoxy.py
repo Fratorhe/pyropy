@@ -7,6 +7,7 @@ from pyropy.constants import R_gas
 from pyropy.pyrolysis import Pyrolysis, compute_temperature, compute_time
 from pyropy.reaction_reader_writer import ReactManager
 
+
 # Implements model from Tranchard et al 2017 JAAP Kinetic analysis of the thermal decomposition of a carbon fibre-reinforced epoxy resin laminate
 
 
@@ -51,7 +52,7 @@ class PyrolysisEpoxy(Pyrolysis):
     def pyro_rates(self, z, t=0, T0=float("inf"), betaKs=0.3333):
         """Compute the pyrolysis reaction rates at a given temperature"""
         temperature = T0 + betaKs * t
-        tol = 10**-4
+        tol = 10 ** -4
         dchidt = []
         sum_z = sum(z)
         if abs(1 - sum_z) < tol:
