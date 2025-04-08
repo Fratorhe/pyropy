@@ -5,7 +5,7 @@ Credits
 Maintainer
 ----------
 
-* Francisco Torres-Herrador <fratorhe@vki.ac.be>
+* Francisco Torres-Herrador <fratorhe@nmsu.edu>
 
 Contributors
 ------------

@@ -8,11 +8,11 @@ import versioneer
 # NOTE: This file must remain Python 2 compatible for the foreseeable future,
 # to ensure that we error out properly for people with outdated setuptools
 # and/or pip.
-min_version = (3, 8)
+min_version = (3, 11)
 if sys.version_info < min_version:
-    error = """
-pyropy does not support Python {0}.{1}.
-Python {3}.{9} and above is required. Check your Python version like so:
+    error = f"""
+pyropy does not support Python.
+Python {min_version} and above is required. Check your Python version like so:
 
 python3 --version
 
@@ -44,7 +44,7 @@ setup(
     description="Project to analyze TGA data",
     long_description=readme,
     author="Francisco Torres-Herrador",
-    author_email="fratorhe@vki.ac.be",
+    author_email="fratorhe@nmsu.edu",
     url="https://github.com/fratorhe/pyropy",
     python_requires=">={}".format(".".join(str(n) for n in min_version)),
     packages=find_packages(exclude=["docs", "tests"]),
