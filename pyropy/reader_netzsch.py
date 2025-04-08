@@ -21,9 +21,12 @@ class ExperimentReaderNetzsch:
     savgol_poly_order: int = 2
 
     def __post_init__(self):
+        # Construct full file path
+        file_path = f"{self.folder}/{self.filename}"
+
         # Read the file, skipping the first 36 lines
         df = pd.read_csv(
-            f"{self.folder}/{self.filename}", skiprows=37, delimiter=";", encoding="latin1", names=COL_NAMES
+            file_path, skiprows=37, delimiter=";", encoding="latin1", names=COL_NAMES
         )
 
         self.rateKs = self.rate / 60
@@ -32,19 +35,23 @@ class ExperimentReaderNetzsch:
         df["time"] = df["time"] * 60
 
         # select segment
-        df = df[df["segment"] == 2].reset_index(drop=True)
-        df["time"] = df["time"] - df["time"].iloc[0]  # reset the time
-        df["mass"] = df["mass"] - df["mass"].iloc[0]  # reset the mass
-        # smoothen it for better derivative computation
+        df = df[df["segment"] == self.segment].reset_index(drop=True)
+        df["time"] -= df["time"].iloc[0]  # Reset the time to start from 0
+        df["mass"] -= df["mass"].iloc[0]  # Reset the mass to start from 0
+        # Apply Savitzky-Golay filter to smooth the mass data for derivative computation
         df["mass"] = savgol_filter(
-            df["mass"], window_length=self.savgol_win_length, polyorder=self.savgol_poly_order
+            df["mass"],
+            window_length=self.savgol_win_length,
+            polyorder=self.savgol_poly_order,
         )
 
         # compute the derivative
         # we do derivative wrt time and divide by heating rate applying chain rule
         # dm/dT = dm/dt * 1/beta
         # we do it this way because T can oscilate, while t always increases.
-        df["dm"] = -self.compute_derivative(df["time"].values, df["mass"].values) / self.rateKs
+        df["dm"] = (
+            -self.compute_derivative(df["time"].values, df["mass"].values) / self.rateKs
+        )
 
         ## if need to apply the filter in the derivative use this:
         # Apply the Savitzky-Golay filter to smooth the derivative
@@ -61,15 +68,18 @@ class ExperimentReaderNetzsch:
     def plotit(self):
         fig, (tga, dtga) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
 
-        tga.plot(self.temperature, self.Rho)
-        dtga.plot(self.temperature, self.dRho)
+        tga.plot(self.temperature, self.Rho, label="TGA")
+        dtga.plot(self.temperature, self.dRho, label="dTGA", color="orange")
 
         tga.set_ylabel("TGA")
-
-        dtga.set_xlabel("Time")
+        dtga.set_xlabel("Temperature (K)")
         dtga.set_ylabel("dTGA")
 
     def compute_derivative(self, x, y):
+        # Ensure x and y have the same length
+        if len(x) != len(y):
+            raise ValueError("x and y must have the same length.")
+
         # Compute the derivative using finite differences
         dy_dx = np.zeros_like(y)
 
@@ -82,5 +92,4 @@ class ExperimentReaderNetzsch:
         # Backward difference for the last point
         dy_dx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2])
 
-        # Add the derivative to the DataFrame
         return dy_dx

@@ -1,49 +1,77 @@
 import os
 import shutil
-from typing import Type, Callable
+from typing import Callable, Type
 
 import spotpy
 
-from pyropy import ExperimentReader, ExperimentReaderCSV, Pyrolysis, PyrolysisParallel, ReactManager
-from pyropy.auxiliary_functions import write_file_scheme, get_numbers_from_filename
+from pyropy import (
+    ExperimentReader,
+    ExperimentReaderCSV,
+    Pyrolysis,
+    PyrolysisParallel,
+    ReactManager,
+)
+from pyropy.auxiliary_functions import get_numbers_from_filename, write_file_scheme
 from pyropy.rmse_multiple_files import rmse_multiple_files
 
 
-class SpotpySetup(object):
-    """Class to setup spotpy optimization routine
+class SpotpySetup:
+    """
+    Class to set up and run SPOTPY optimization for pyrolysis models.
 
-    Attributes:
-        :atrr betas:
-        :atrr params:
-        :atrr names:
-        :atrr times:
-        :atrr dRho:
-        :atrr Rho:
-        :atrr temperatures:
-        :atrr iternumber:
+    Attributes
+    ----------
+    betas : list of float
+        Heating rates extracted from filenames.
+    params : list
+        SPOTPY parameter definitions.
+    names : list of str
+        Names of parameters to optimize.
+    times : list of np.ndarray
+        Time arrays from experiments.
+    dRho : list of np.ndarray
+        Experimental dRho data.
+    Rho : list of np.ndarray
+        Experimental Rho data.
+    temperatures : list of np.ndarray
+        Experimental temperature profiles.
+    iternumber : int
+        Counter for simulation iterations.
     """
 
     def __init__(
         self,
-        files,
-        params,
-        folder,
-        scheme_file,
-        pyro_type: Type[Pyrolysis] = PyrolysisParallel,
-        keepFolders=False,
+        files: list[str],
+        params: list,
+        folder: str,
+        scheme_file: str,
+        pyro_type: Type = PyrolysisParallel,
+        keepFolders: bool = False,
         experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
-        isothermal=False,
-        objective_function=Callable,
-    ):
+        isothermal: bool = False,
+        objective_function: Callable | None = None,
+    ) -> None:
         """
+        Initialize the SPOTPY setup.
 
-        :param files: list of files to be treated
-        :param params: list of params to be optimized
-        :param folder: str folder where to read the experiments
-        :param scheme_file: str with the scheme used
-        :param pyro_type: str for type of pyrolysis (parallel, competitive, etc)
-        :param keepFolders: bool if folder of simulations are saved
-        :param isothermal: bool isothermal tests (not used in most cases)
+        Parameters
+        ----------
+        files : list of str
+            Filenames with experimental data.
+        params : list
+            Parameters to be optimized.
+        folder : str
+            Directory with experimental files.
+        scheme_file : str
+            Path to reaction scheme template.
+        pyro_type : Type
+            Pyrolysis model class (default: PyrolysisParallel).
+        keepFolders : bool
+            Whether to retain folders created during simulations.
+        isothermal : bool
+            Whether simulations are isothermal (default: False).
+        objective_function : Callable
+            Objective function to compare simulations with experiments.
         """
         self.pyro_type = pyro_type
         self.folder = folder
@@ -75,8 +103,12 @@ class SpotpySetup(object):
 
     def get_param_names(self, params):
         """
+        Extract and store the names of parameters.
 
-        :param params:
+        Parameters
+        ----------
+        params : list
+            List of parameter objects, where each object has a 'name' attribute.
         """
         for param in params:
             self.names.append(param.name)
@@ -84,59 +116,91 @@ class SpotpySetup(object):
 
     def parameters(self):
         """
+        Generate a set of SPOTPY parameters.
 
-        :return:
+        Returns
+        -------
+        spotpy.parameter.ParameterSet
+            A set of parameters ready for SPOTPY optimization.
         """
         return spotpy.parameter.generate(self.params)
 
-    def simulation(self, vector):
+    def simulation(self, vector: list[float]) -> list:
         """
-        Simulate the case with ode_solver
-        :param vector: vector of unknowns
-        :return: list with [resultsdRho,resultsRho] from ode_solver
+        Run the simulation with the provided parameter vector.
+
+        Parameters
+        ----------
+        vector : list of float
+            Vector of parameter values to be used in the simulation.
+
+        Returns
+        -------
+        list
+            List containing simulation results [results_dRho, results_Rho].
         """
         simulations = self.ode_solver(vector=vector)
         return simulations
 
-    def evaluation(self):
+    def evaluation(self) -> list:
         """
+        Retrieve experimental observations for comparison.
 
-        :rtype: list with experimental observations
+        Returns
+        -------
+        list
+            A list containing the experimental data [dRho, Rho].
         """
-        observations = [self.dRho, self.Rho]
-        # observations = self.dRho
-        return observations
+        return [self.dRho, self.Rho]
 
-    def objectivefunction(self, simulation, evaluation):
+    def objectivefunction(self, simulation: list, evaluation: list) -> float:
         """
+        Calculate the objective function value (e.g., RMSE) between simulation and experimental data.
 
-        :param simulation: list with simulation results
-        :param evaluation: list with experimental observations
-        :return: float with value of the objective function
-        """
-        # Drho = rmse_multiple_files(evaluation,simulation) # 100 to give weight wrt rho
-        rmse = rmse_multiple_files(evaluation, simulation)  # 100 to give weight wrt rho
-        return rmse
+        Parameters
+        ----------
+        simulation : list
+            List containing simulation results [dRho, Rho].
+        evaluation : list
+            List containing experimental data [dRho, Rho].
 
-    def ode_solver(self, vector):
+        Returns
+        -------
+        float
+            The computed objective function value (e.g., RMSE).
         """
+        return rmse_multiple_files(evaluation, simulation)
 
-        :param vector: vector of unknowns
-        :return: list of results for simulation function
+    def ode_solver(self, vector: list[float]) -> list[list]:
         """
-        results_dRho = []
-        results_Rho = []
+        Solve the ODE system for each experiment using the provided parameter vector.
+
+        Parameters
+        ----------
+        vector : list of float
+            A list of parameter values (unknowns) for the simulation.
+
+        Returns
+        -------
+        list
+            A list containing two sublists: [results_dRho, results_Rho] from simulations.
+        """
+        results_dRho, results_Rho = [], []
         self.iternumber += 1
         os.makedirs(str(self.iternumber))
 
         for beta, temperature in zip(self.betas, self.temperatures):
+            sim_folder = f"{self.iternumber}/"
             write_file_scheme(
-                filename=self.scheme_file, vector=vector, param_names=self.names, folder=str(self.iternumber) + "/"
+                filename=self.scheme_file,
+                vector=vector,
+                param_names=self.names,
+                folder=sim_folder,
             )
-            reactions = ReactManager(filename=self.scheme_file, folder=str(self.iternumber) + "/")
+            reactions = ReactManager(filename=self.scheme_file, folder=sim_folder)
             reactions.react_reader()
             reactions.param_reader()
-            temperature = list(temperature)
+
             n_timesteps = len(temperature)
             simulation = self.pyro_type(
                 temp_0=temperature[0],
@@ -150,7 +214,7 @@ class SpotpySetup(object):
             results_dRho.append(simulation.drho_solid)
             results_Rho.append(simulation.rho_solid)
 
-        if self.keepFolders is False:
+        if not self.keepFolders:
             shutil.rmtree(str(self.iternumber))
 
         return [results_dRho, results_Rho]

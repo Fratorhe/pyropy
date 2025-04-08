@@ -1,9 +1,9 @@
-import matplotlib.pyplot as plt
 import matplotlib.cm as colormaps
+import matplotlib.pyplot as plt
 
 cmap = plt.cm.Dark2.colors
 
-from pyropy import ReactManager, PyrolysisParallel, PyrolysisParallelAnalytical
+from pyropy import PyrolysisParallel, PyrolysisParallelAnalytical, ReactManager
 
 reactions = ReactManager("data_parallel_verification.json")
 reactions.react_reader()
@@ -12,8 +12,10 @@ reactions.param_reader()
 fig1, ax1 = plt.subplots()
 fig2, ax2 = plt.subplots()
 
-beta = 5
-test = PyrolysisParallel(temp_0=273, temp_end=2000, beta=beta, n_points=200, reaction_scheme_obj=reactions)
+beta = 1
+test = PyrolysisParallel(
+    temp_0=273, temp_end=2000, beta=beta, n_points=200, reaction_scheme_obj=reactions
+)
 
 # Numerical solution using 200 points
 test.solve_system()

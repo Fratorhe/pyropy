@@ -4,32 +4,40 @@ import spotpy
 
 def rmse_multiple_files(evaluation, simulation):
     """
-    Root Mean Squared Error for more than 1 file
+    Compute the Root Mean Squared Error (RMSE) for multiple files.
 
-        .. math::
+    The RMSE is calculated using the following formula:
 
-         RMSE=\\sqrt{\\frac{1}{N}\\sum_{i=1}^{N}(e_{i}-s_{i})^2}
+    .. math::
 
-    :evaluation: Observed data to compared with simulation data.
-    :type: list of lists
+     RMSE = \\sqrt{\\frac{1}{N}\\sum_{i=1}^{N}(e_{i}-s_{i})^2}
 
-    :simulation: simulation data to compared with evaluation data
-    :type: list of lists
+    Parameters
+    ----------
+    evaluation : list of lists
+        Observed data to compare with simulation data.
 
-    :return: Root Mean Squared Error
-    :rtype: float
+    simulation : list of lists
+        Simulation data to compare with evaluation data.
+
+    Returns
+    -------
+    float
+        Root Mean Squared Error (RMSE) value.
     """
 
     scale_coeff_dRho = 1000
     mses = []
-    n_objectives = len(evaluation)  # 1 if 1 objective (dRho), 2 if 2 objectives (dRho, Rho)
-    # n_objectives = 1  # 1 if only dRho
-    n_files = len(evaluation[0])  # number of files to optimize
-    for i in range(n_objectives):
-        for j in range(n_files):
-            mse_calc = spotpy.objectivefunctions.mse(evaluation[i][j], simulation[i][j])
-            if i == 0:  # this means we are in dRho
-                mses.append(mse_calc * scale_coeff_dRho)
-            else:
-                mses.append(mse_calc)
-    return np.sqrt(sum(mses))
+    # Iterate through each objective and file pair
+    for i, eval_data in enumerate(evaluation):
+        for j, eval_file in enumerate(eval_data):
+            mse_calc = spotpy.objectivefunctions.mse(eval_file, simulation[i][j])
+
+            # Scale dRho (first objective) by the coefficient
+            if i == 0:
+                mse_calc *= scale_coeff_dRho
+
+            mses.append(mse_calc)
+
+    # Return the square root of the sum of the MSEs
+    return np.sqrt(np.sum(mses))

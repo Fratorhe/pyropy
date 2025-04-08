@@ -1,7 +1,13 @@
 import matplotlib.pyplot as plt
-import spotpy
-from pyropy.optimizer import spotpy_setup
+import numpy as np
 import pandas as pd
+import spotpy
+
+from pyropy.auxiliary_functions import replace_results
+from pyropy.experiment_reader import ExperimentReaderCSV
+from pyropy.optimizer import SpotpySetup
+from pyropy.pyrolysis import PyrolysisCompetitive
+from pyropy.rmse_multiple_files import rmse_multiple_files
 
 results = []
 folder = "."
@@ -19,26 +25,34 @@ params = [
     spotpy.parameter.Uniform("gamma2", low=0.005, high=0.02, optguess=0.99),
 ]
 
-spotpy_setup = spotpy_setup(
+spotpy_setup = SpotpySetup(
     files=filesCSV,
     params=params,
     folder=folder,
     scheme_file="data_competing.json",
-    pyro_type="PyrolysisCompetitive",
+    pyro_type=PyrolysisCompetitive,
+    keepFolders=False,
+    experiment_reader=ExperimentReaderCSV,
+    objective_function=rmse_multiple_files,
 )
-rep = 2000
+rep = 200
 
-sampler = spotpy.algorithms.sceua(spotpy_setup, dbname="SCEUA", dbformat="ram", alt_objfun="rmse_multiple_files")
-# sampler=spotpy.algorithms.sceua(spotpy_setup, dbname='SCEUA', dbformat='csv', parallel="mpi",alt_objfun="rmse_multiple_files")
-sampler.sample(rep, ngs=8)
+sampler = spotpy.algorithms.sceua(
+    spotpy_setup, dbname="SCEUA", dbformat="csv", save_sim=False, db_precision=np.float64
+)
+sampler.sample(rep)
 results.append(sampler.getdata())
 names = spotpy.analyser.get_parameternames(sampler.getdata())
-best = spotpy.analyser.get_best_parameterset(sampler.getdata())
+best = spotpy.analyser.get_best_parameterset(sampler.getdata(), maximize=False)
 
-spotpy_setup.plotBest(bestResultVector=best[0])
 bestResults = [x for x in best[0]]
 
 resultCSV = pd.DataFrame.from_dict({"Params": names, "Value": bestResults})
 resultCSV.to_csv(folder + "/" + "results_1")
 
-plt.show()
+replace_results(
+    bestResults,
+    names,
+    "data_competing.json.template",
+    "data_optimized.json",
+)

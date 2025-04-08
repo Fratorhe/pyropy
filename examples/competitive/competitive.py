@@ -1,18 +1,22 @@
-from pyropy.pyrolysis import PyrolysisCompetitive
 import matplotlib.pyplot as plt
 
-test = PyrolysisCompetitive(temp_0=373, temp_end=400, time=None, beta=1, n_points=500)
+from pyropy.pyrolysis import PyrolysisCompetitive
+from pyropy.reaction_reader_writer import ReactManager
 
+reactions = ReactManager("data_competing.json")
+reactions.react_reader()
+reactions.param_reader()
 
-# test.param_getter_opti([12,24,35,10,4,0.7,0.3],['E1','E2','E3','E4','A1','gamma1','gamma2'],'data_competing.json')
-test.react_reader("data_competing.json")
-test.param_reader("data_competing.json")
+test = PyrolysisCompetitive(
+    temp_0=373, temp_end=2000, beta=1, n_points=500, reaction_scheme_obj=reactions
+)
+
 # test.react_writer("tests")
 test.solve_system()
 # test.plot_solid_density()
 #
-rho = test.get_density()
-t = test.get_time()
+rho = test.rho_solid
+t = test.time
 plt.plot(t, rho)
 plt.show()
 # test.to_csv('test.csv')

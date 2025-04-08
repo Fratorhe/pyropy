@@ -1,20 +1,50 @@
-from . import pyrolysis as pyro
+from dataclasses import dataclass, field
+
 import numpy as np
 from scipy.integrate import solve_ivp
 
+from pyropy.constants import R_gas
+from pyropy.pyrolysis import Pyrolysis, compute_temperature, compute_time
+from pyropy.reaction_reader_writer import ReactManager
 
 # Implements model from Tranchard et al 2017 JAAP Kinetic analysis of the thermal decomposition of a carbon fibre-reinforced epoxy resin laminate
 
 
-class PyrolysisEpoxy(pyro.Pyrolysis):
-    def __init__(self, temp_0=373, temp_end=2000, time=None, beta=20, n_points=500):
-        super().__init__(temp_0, temp_end, time, beta, n_points)
+@dataclass
+class PyrolysisEpoxy(Pyrolysis):
+    temp_0: float
+    temp_end: float
+    beta: float
+    n_points: int
+    reaction_scheme_obj: ReactManager
+
+    isothermal: bool = False
+
+    param_names: list[str] = field(default_factory=list, init=False)
+    dict_params: dict = field(default_factory=dict, init=False)
+
+    def __post_init__(self):
+        self.n_reactions = self.reaction_scheme_obj.n_reactions
+        self.betaKs = self.beta / 60
+        self.time = compute_time(
+            temp_0=self.temp_0,
+            temp_end=self.temp_end,
+            betaKs=self.betaKs,
+            n_points=self.n_points,
+        )
+        self.temperature = compute_temperature(
+            self.time, temp_0=self.temp_0, betaKs=self.betaKs
+        )
 
     def generate_rate(self, temperature=float("inf")):
         k = []
         for idx in range(0, self.n_reactions):
             k.append(
-                10 ** self.dict_params["A"][idx] * np.exp(-self.dict_params["E"][idx] / (self.R * temperature))
+                10 ** self.reaction_scheme_obj.dict_params["A"][idx]
+                * np.exp(
+                    -self.reaction_scheme_obj.dict_params["E"][idx]
+                    / (R_gas * temperature)
+                )
             )
         return k
 
@@ -31,8 +61,8 @@ class PyrolysisEpoxy(pyro.Pyrolysis):
             for idx in range(0, self.n_reactions):
                 dchidt.append(
                     k[idx]
-                    * (1 - sum_z) ** self.dict_params["n"][idx]
-                    * (1 + self.dict_params["Kcat"][idx] * z[idx])
+                    * (1 - sum_z) ** self.reaction_scheme_obj.dict_params["n"][idx]
+                    * (1 + self.reaction_scheme_obj.dict_params["Kcat"][idx] * z[idx])
                 )
 
         return dchidt
@@ -56,16 +86,14 @@ class PyrolysisEpoxy(pyro.Pyrolysis):
             rtol=1e-5,
         )
 
-        self.time = self.z.t
-        self.temperature = self.time * self.betaKs + temp_0
-
         # Compute the density evolution from chi
         self.rho_solid = np.zeros(len(self.time))
         percent_evo_sum = np.zeros(len(self.time))
-        for chi, F in zip(self.z.y, self.dict_params["F"]):
+        for chi, F in zip(self.z.y, self.reaction_scheme_obj.dict_params["F"]):
             percent_evo = chi * F
             percent_evo_sum += percent_evo
 
-        self.rho_solid = self.rhoIni[0] - percent_evo_sum
+        # TODO: this may need some verification
+        self.rho_solid = self.reaction_scheme_obj.rhoIni[0] - percent_evo_sum
 
         self.drho_solid = np.gradient(-self.rho_solid, self.temperature)

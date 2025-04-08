@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import spotpy
 
-from pyropy import SpotpySetup, PyrolysisCompetitive, ExperimentReaderCSV, rmse_multiple_files, replace_results
+from pyropy import ExperimentReaderCSV, PyrolysisCompetitive, SpotpySetup
+from pyropy.auxiliary_functions import replace_results
+from pyropy.rmse_multiple_files import rmse_multiple_files
 
 results = []
 folder = "."
@@ -44,4 +46,9 @@ resultCSV = pd.DataFrame.from_dict({"Params": names, "Value": bestResults})
 print(resultCSV)
 resultCSV.to_csv(folder + "/" + "results_1")
 
-replace_results(bestResults, names, "data_competitive_verification.json.template", "data_optimized.json")
+replace_results(
+    bestResults,
+    names,
+    "data_competitive_verification.json.template",
+    "data_optimized.json",
+)
