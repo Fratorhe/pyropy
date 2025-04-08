@@ -11,5 +11,6 @@ pyropy Documentation
 
    installation
    usage
+   reader
    release-history
    min_versions
