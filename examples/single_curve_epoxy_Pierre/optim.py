@@ -7,6 +7,7 @@ from pyropy.auxiliary_functions import replace_results
 from pyropy.experiment_reader import ExperimentReaderCSV
 from pyropy.optimizer import SpotpySetup
 from pyropy.pyrolysis import PyrolysisParallel
+from pyropy.reaction_reader_writer import InMemoryReactManager
 from pyropy.rmse_multiple_files import rmse_multiple_files
 
 results = []
@@ -30,6 +31,8 @@ spotpy_setup = SpotpySetup(
     keepFolders=False,
     experiment_reader=ExperimentReaderCSV,
     objective_function=rmse_multiple_files,
+    # Example: inject an in-memory ReactManager factory to avoid creating folders on disk
+    react_manager_factory=InMemoryReactManager,
 )
 rep = 500
 

@@ -4,7 +4,7 @@ from jsmin import jsmin
 
 
 def replace_results(
-        vector, param_names, filename_template, filename_out, symbolleft="(", symbolright=")"
+    vector, param_names, filename_template, filename_out, symbolleft="(", symbolright=")"
 ):
     """
     Replaces parameter placeholders in a template file with values from a vector.
@@ -153,3 +153,76 @@ class ReactManager:
         # Write the data to the file
         with open(filename, "w") as outfile:
             json.dump(data, outfile, indent=2)
+
+
+class InMemoryReactManager:
+    """
+    A ReactManager that builds its internal data structures in-memory from a
+    template and a parameter vector, without writing files to disk.
+
+    Usage: instantiate with the same signature as ReactManager but additionally
+    pass `vector` and `param_names` to perform replacements in-memory.
+    """
+
+    def __init__(
+        self,
+        filename: str = "",
+        folder: str = "./",
+        vector: list = None,
+        param_names: list[str] | None = None,
+        symbolleft: str = "(",
+        symbolright: str = ")",
+    ):
+        self.folder = folder
+        self.filename = filename
+        if vector is not None and param_names is not None:
+            # Load template and perform replacements in-memory
+            with open(filename + ".template", "r") as fin:
+                content = fin.read()
+            for val, param in zip(vector, param_names):
+                content = content.replace(symbolleft + param + symbolright, str(val))
+
+            # parse JSON from the replaced content
+            data = json.loads(jsmin(content))
+
+            # populate attributes similar to react_reader()/param_reader()
+            self.solids = data["solids"]
+            self.reactions = data["reactions"]
+            self.n_reactions = len(self.reactions)
+            self.rhoIni = data.get("rhoIni")
+
+            # reactants/products
+            reactants, rhsList, solid_product, gases_product = [], [], [], []
+            for reaction in self.reactions:
+                for key, rhs in reaction.items():
+                    if key in self.solids:
+                        reactants.append(key)
+                        rhsList.append(rhs)
+
+            for rhs in rhsList:
+                rhsSplit = rhs.strip().replace(" ", "").split("+")
+                gases = [product for product in rhsSplit if product not in self.solids]
+                solid_product.extend(
+                    [product for product in rhsSplit if product in self.solids]
+                )
+                gases_product.append(gases)
+
+            self.unique_gases = list(
+                set([item for sublist in gases_product for item in sublist])
+            )
+            self.solid_product = solid_product
+            self.solid_reactant = reactants
+            self.gas_product = gases_product
+            self.n_solids = len(self.solids)
+            self.rhs = rhsList
+
+            # parameters
+            parameters = data.get("parameters", [])
+            self.param_names = parameters[0].keys() if parameters else []
+            self.dict_params = dict()
+            for react in parameters:
+                for key, value in react.items():
+                    self.dict_params.setdefault(key, []).append(value)
+
+            if "g" in self.dict_params:
+                self.g_sol = [1 - sum(g_react) for g_react in self.dict_params["g"]]

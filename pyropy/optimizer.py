@@ -4,12 +4,7 @@ from typing import Callable, Type
 
 import spotpy
 
-from pyropy import (
-    ExperimentReader,
-    ExperimentReaderCSV,
-    PyrolysisParallel,
-    ReactManager,
-)
+from pyropy import ExperimentReader, ExperimentReaderCSV, PyrolysisParallel, ReactManager
 from pyropy.auxiliary_functions import get_numbers_from_filename, write_file_scheme
 from pyropy.rmse_multiple_files import rmse_multiple_files
 
@@ -39,16 +34,17 @@ class SpotpySetup:
     """
 
     def __init__(
-            self,
-            files: list[str],
-            params: list,
-            folder: str,
-            scheme_file: str,
-            pyro_type: Type = PyrolysisParallel,
-            keepFolders: bool = False,
-            experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
-            isothermal: bool = False,
-            objective_function: Callable | None = None,
+        self,
+        files: list[str],
+        params: list,
+        folder: str,
+        scheme_file: str,
+        pyro_type: Type = PyrolysisParallel,
+        keepFolders: bool = False,
+        experiment_reader: Type[ExperimentReader] = ExperimentReaderCSV,
+        isothermal: bool = False,
+        objective_function: Callable | None = None,
+        react_manager_factory: Callable | None = None,
     ) -> None:
         """
         Initialize the SPOTPY setup.
@@ -98,6 +94,11 @@ class SpotpySetup:
         self.keepFolders = keepFolders
         self.pyro_type = pyro_type
         self.objective_function = objective_function
+        # react_manager_factory should be a callable with signature:
+        # (vector: list[float], param_names: list[str], filename: str, folder: str) -> ReactManager-like object
+        # If None, fall back to default behavior that writes the scheme file to disk
+        # and instantiates the on-disk ReactManager.
+        self.react_manager_factory = react_manager_factory
         # X = self.dRho+self.Rho
 
     def get_param_names(self, params):
@@ -186,19 +187,39 @@ class SpotpySetup:
         """
         results_dRho, results_Rho = [], []
         self.iternumber += 1
-        os.makedirs(str(self.iternumber))
+
+        # Only create an on-disk folder when using the default file-based ReactManager
+        created_on_disk_folder = False
+        if self.react_manager_factory is None:
+            os.makedirs(str(self.iternumber), exist_ok=True)
+            created_on_disk_folder = True
 
         for beta, temperature in zip(self.betas, self.temperatures):
             sim_folder = f"{self.iternumber}/"
-            write_file_scheme(
-                filename=self.scheme_file,
-                vector=vector,
-                param_names=self.names,
-                folder=sim_folder,
-            )
-            reactions = ReactManager(filename=self.scheme_file, folder=sim_folder)
-            reactions.react_reader()
-            reactions.param_reader()
+
+            # If a custom react_manager_factory is provided use it. The factory must
+            # return an object compatible with the Pyrolysis classes (attributes
+            # like dict_params, rhoIni, solids, n_reactions, etc.). The factory may
+            # choose to create files on disk or work in-memory.
+            if self.react_manager_factory is None:
+                # Default behaviour: write scheme file to disk and use on-disk ReactManager
+                write_file_scheme(
+                    filename=self.scheme_file,
+                    vector=vector,
+                    param_names=self.names,
+                    folder=sim_folder,
+                )
+                reactions = ReactManager(filename=self.scheme_file, folder=sim_folder)
+                reactions.react_reader()
+                reactions.param_reader()
+            else:
+                # Call the provided factory. Use keyword args to allow flexible factories.
+                reactions = self.react_manager_factory(
+                    vector=vector,
+                    param_names=self.names,
+                    filename=self.scheme_file,
+                    folder=sim_folder,
+                )
 
             n_timesteps = len(temperature)
             simulation = self.pyro_type(
@@ -213,7 +234,7 @@ class SpotpySetup:
             results_dRho.append(simulation.drho_solid)
             results_Rho.append(simulation.rho_solid)
 
-        if not self.keepFolders:
+        if not self.keepFolders and created_on_disk_folder:
             shutil.rmtree(str(self.iternumber))
 
         return [results_dRho, results_Rho]
